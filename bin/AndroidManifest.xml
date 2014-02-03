@@ -19,7 +19,7 @@
             android:enabled="true">            
         </activity>
         <service
-            android:name="com.codyengel.helloglass.HelloGlass"
+            android:name="com.jbirdvegas.glassLocation.HelloGlass"
             android:enabled="true"
             android:exported="true"
             android:icon="@drawable/ic_launcher"
