@@ -7,6 +7,8 @@ package com.jbirdvegas.glassLocation;
 
 // Glass Specific
 
+import android.app.AlarmManager;
+import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Intent;
 import android.location.Criteria;
@@ -15,12 +17,13 @@ import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Bundle;
 import android.os.IBinder;
+import android.speech.tts.TextToSpeech;
 import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 import com.google.android.glass.timeline.LiveCard;
 import com.google.android.glass.timeline.TimelineManager;
 
-public class HelloGlass extends Service implements LocationListener{
+public class HelloGlass extends Service {
 	
 	private static final String LIVE_CARD_ID = "helloglass";
     public static final String MESSAGE = "message";
@@ -28,6 +31,8 @@ public class HelloGlass extends Service implements LocationListener{
     public static final String STATUS_MESSAGE = "status_message";
     public static final String PROVIDER_MESSAGE = "provider_message";
     private static final String TAG = HelloGlass.class.getSimpleName();
+    public static final String SEARCHING_METHOD = "searching_message";
+    public static final String KILL_UPDATES = "kill_updates";
 
     /*
      * TimelineManager allows applications to interact with the timeline.
@@ -44,6 +49,7 @@ public class HelloGlass extends Service implements LocationListener{
 	@SuppressWarnings("unused")
 	private LiveCard mLiveCard;
     private LocationManager mLocationManager;
+    private LocationListener mLocationListener;
 
     @Override
 	public void onCreate() {
@@ -53,14 +59,24 @@ public class HelloGlass extends Service implements LocationListener{
 
 	@Override
 	public IBinder onBind(Intent intent) {
+        Log.d(TAG, "onBind");
 		return null;
 	} // IBinder
-	
+
+    private static boolean isStarted = false;
 	/*
 	 * onStartCommand is used to start a service from your voice trigger you set up in res/xml/voice_trigger_start.xml
 	 */
 	public int onStartCommand(Intent intent, int flags, int startId) {
-        location();
+        if (!isStarted) {
+            isStarted = true;
+            location();
+        }
+        if (intent != null && intent.getExtras() != null) {
+            if (intent.getExtras().getBoolean(KILL_UPDATES, false)) {
+                killAllLocationThings(intent);
+            }
+        }
 		// Where the magic happens
 		mLiveCard = mTimelineManager.createLiveCard(LIVE_CARD_ID);
         mLiveCard.publish(LiveCard.PublishMode.REVEAL);
@@ -68,11 +84,23 @@ public class HelloGlass extends Service implements LocationListener{
 
         i.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
 		Log.d(TAG, "Attempting to launch activity");
-        sendMessage(getUpdateIntent());
+        Intent updateIntent = getUpdateIntent();
+        updateIntent.putExtra(SEARCHING_METHOD, "nothing to report");
+        sendMessage(updateIntent);
         startActivity(i);
 
 		return Service.START_REDELIVER_INTENT;
 	} // onStartCommand
+
+    private void killAllLocationThings(Intent intent) {
+        if (mLocationManager != null&& mLocationListener != null) {
+            mLocationManager.removeUpdates(mLocationListener);
+            AlarmManager alarmManager = (AlarmManager) getSystemService(ALARM_SERVICE);
+            PendingIntent service = PendingIntent.getService(this, 42, intent, 0);
+            alarmManager.cancel(service);
+        }
+        stopSelf();
+    }
 
     @Override
     public boolean stopService(Intent name) {
@@ -90,7 +118,7 @@ public class HelloGlass extends Service implements LocationListener{
         boolean isEnabled = mLocationManager.isProviderEnabled(provider);
         if (isEnabled) {
             // Define a listener that responds to location updates
-            LocationListener locationListener = new LocationListener() {
+            mLocationListener = new LocationListener() {
                 public void onLocationChanged(Location location) {
                     // Called when a new location is found by the network location provider.
                     makeUseOfNewLocation(location);
@@ -104,17 +132,7 @@ public class HelloGlass extends Service implements LocationListener{
             };
 
             // Register the listener with the Location Manager to receive location updates
-            mLocationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 10000, 0, locationListener);
-//        List<String> providers = locationManager.getProviders(
-//                criteria, true /* enabledOnly */);
-//
-//        for (String provider : providers) {
-//            long minTime = 1000;
-//            float minDistance = 500;
-//            Log.d(TAG, "found provider: " + provider);
-//            locationManager.requestLocationUpdates(provider, minTime,
-//                    minDistance, this);
-//        }
+            mLocationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 10000, 0, mLocationListener);
         }
     }
 
@@ -126,8 +144,8 @@ public class HelloGlass extends Service implements LocationListener{
         String lat = "Latitude: " + location.getLatitude();
         String lng = ", Longitude: " + location.getLongitude();
         String summary = lat + lng;
-        //TextToSpeech mSpeech = new TextToSpeech(this, null);
-        //mSpeech.speak(summary, TextToSpeech.QUEUE_FLUSH, null);
+        TextToSpeech mSpeech = new TextToSpeech(this, null);
+        mSpeech.speak(summary, TextToSpeech.QUEUE_FLUSH, null);
         sendMessage(intent);
     }
 
@@ -139,50 +157,8 @@ public class HelloGlass extends Service implements LocationListener{
         return Magic.class;
     }
 
-    @Override
-    public void onLocationChanged(Location location) {
-        makeUseOfNewLocation(location);
-    }
-
     private void sendMessage(Intent intent) {
         LocalBroadcastManager.getInstance(getApplicationContext())
                 .sendBroadcast(intent);
-    }
-
-    @Override
-    public void onStatusChanged(String s, int i, Bundle bundle) {
-        Intent intent = getUpdateIntent()
-                .putExtra(STATUS_MESSAGE, s);
-        debugBundle(bundle);
-//        startActivity(intent);
-        sendMessage(intent);
-
-    }
-
-    public void debugBundle(Bundle bundle) {
-        StringBuilder builder = new StringBuilder(0);
-        for (String key : bundle.keySet()) {
-            builder.append(key);
-            builder.append(':');
-            builder.append(bundle.getString(key));
-            builder.append('\n');
-        }
-        Log.d(TAG, "DEBUG_INTENT:" + builder.toString());
-    }
-
-    @Override
-    public void onProviderEnabled(String s) {
-        Intent intent = getUpdateIntent()
-                .putExtra(PROVIDER_MESSAGE, s);
-//        startActivity(intent);
-        sendMessage(intent);
-    }
-
-    @Override
-    public void onProviderDisabled(String s) {
-        Intent intent = getUpdateIntent()
-                .putExtra(PROVIDER_MESSAGE, s);
-//        startActivity(intent);
-        sendMessage(intent);
     }
 }
