@@ -17,20 +17,19 @@ import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Bundle;
 import android.os.IBinder;
-import android.speech.tts.TextToSpeech;
 import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 import com.google.android.glass.timeline.LiveCard;
 import com.google.android.glass.timeline.TimelineManager;
 
-public class HelloGlass extends Service {
+public class LocationService extends Service {
 	
 	private static final String LIVE_CARD_ID = "helloglass";
     public static final String MESSAGE = "message";
     public static final String LOCATION_MESSAGE = "location_message";
     public static final String STATUS_MESSAGE = "status_message";
     public static final String PROVIDER_MESSAGE = "provider_message";
-    private static final String TAG = HelloGlass.class.getSimpleName();
+    private static final String TAG = LocationService.class.getSimpleName();
     public static final String SEARCHING_METHOD = "searching_message";
     public static final String KILL_UPDATES = "kill_updates";
 
@@ -84,12 +83,12 @@ public class HelloGlass extends Service {
 
         i.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
 		Log.d(TAG, "Attempting to launch activity");
-        Intent updateIntent = getUpdateIntent();
-        updateIntent.putExtra(SEARCHING_METHOD, "nothing to report");
-        sendMessage(updateIntent);
+//        Intent updateIntent = getUpdateIntent();
+//        updateIntent.putExtra(SEARCHING_METHOD, "nothing to report");
+//        sendMessage(updateIntent);
         startActivity(i);
 
-		return Service.START_REDELIVER_INTENT;
+		return Service.START_NOT_STICKY;
 	} // onStartCommand
 
     private void killAllLocationThings(Intent intent) {
@@ -144,17 +143,15 @@ public class HelloGlass extends Service {
         String lat = "Latitude: " + location.getLatitude();
         String lng = ", Longitude: " + location.getLongitude();
         String summary = lat + lng;
-        TextToSpeech mSpeech = new TextToSpeech(this, null);
-        mSpeech.speak(summary, TextToSpeech.QUEUE_FLUSH, null);
         sendMessage(intent);
     }
 
     private Intent getUpdateIntent() {
-        return new Intent(Magic.LOCATION_UPDATE);
+        return new Intent(MainActivity.LOCATION_UPDATE);
     }
 
     private Class<?> getLiveCardClass() {
-        return Magic.class;
+        return MainActivity.class;
     }
 
     private void sendMessage(Intent intent) {

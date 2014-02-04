@@ -8,7 +8,7 @@
         android:minSdkVersion="15"
         android:targetSdkVersion="15" />
 	
-    <!-- Note that HelloGlass doesn't not use a theme. Don't use themes. -->
+    <!-- Note that LocationService doesn't not use a theme. Don't use themes. -->
     <application
         android:allowBackup="true"
         android:icon="@drawable/ic_launcher"
@@ -19,7 +19,7 @@
             android:enabled="true">            
         </activity>
         <service
-            android:name="com.jbirdvegas.glassLocation.HelloGlass"
+            android:name="com.jbirdvegas.glassLocation.LocationService"
             android:enabled="true"
             android:exported="true"
             android:icon="@drawable/ic_launcher"
