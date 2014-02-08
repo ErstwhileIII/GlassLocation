@@ -15,25 +15,41 @@
         android:allowBackup="true"
         android:icon="@drawable/ic_launcher"
         android:label="@string/app_name" >
+
+        <activity android:name=".SensorActivity"
+                  android:label="@string/sensor_label"
+                  android:enabled="true" />
+
+        <service android:name=".SensorService"
+                 android:enabled="true"
+                 android:icon="@drawable/ic_launcher"
+                 android:label="@string/sensor_label_service">
+            <intent-filter>
+                <action android:name="com.google.android.glass.action.VOICE_TRIGGER" />
+            </intent-filter>
+            <meta-data
+                android:name="com.google.android.glass.VoiceTrigger"
+                android:resource="@xml/voice_trigger_sensor" />
+        </service>
+
         <activity
-            android:name=".MainActivity"
+            android:name=".LocationActivity"
             android:label="@string/app_name"
-            android:enabled="true">            
-        </activity>
+            android:enabled="true"/>
+
         <service
             android:name=".LocationService"
             android:enabled="true"
-            android:exported="true"
             android:icon="@drawable/ic_launcher"
             android:label="@string/app_name" >
             <intent-filter>
                 <action android:name="com.google.android.glass.action.VOICE_TRIGGER" />
             </intent-filter>
 			
-            <!-- Voice command found in res/xml/voice_trigger_start -->
+            <!-- Voice command found in res/xml/voice_trigger_location -->
             <meta-data
                 android:name="com.google.android.glass.VoiceTrigger"
-                android:resource="@xml/voice_trigger_start" />
+                android:resource="@xml/voice_trigger_location" />
         </service>
     </application>
 

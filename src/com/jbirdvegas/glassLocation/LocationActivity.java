@@ -7,9 +7,6 @@
  */
 package com.jbirdvegas.glassLocation;
 
-import android.app.Activity;
-import android.app.AlarmManager;
-import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -20,36 +17,28 @@ import android.location.Location;
 import android.os.Bundle;
 import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
-import android.view.*;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.View;
 import com.google.android.glass.app.Card;
 
 import java.io.IOException;
 import java.text.DecimalFormat;
-import java.text.SimpleDateFormat;
-import java.util.*;
+import java.util.List;
+import java.util.Locale;
 
-public class MainActivity extends Activity {
+public class LocationActivity extends BaseActivity {
 
-    private static final String TAG = MainActivity.class.getSimpleName();
+    private static final String TAG = LocationActivity.class.getSimpleName();
     public static final String LOCATION_UPDATE = "message_update_location";
-    private static final long TWO_SECONDS = 5000;
-    private Card mCard;
     private BroadcastReceiver mBroadcastReceiver;
-    private Timer mTimer;
-    private int mSecondsSince = 0;
-    private CounterTask mCounterTask;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        Log.d(TAG, "MainActivity onCreate");
-        if (mTimer == null) {
-            mTimer = new Timer();
-        }
-        mCounterTask = new CounterTask();
-        mTimer.schedule(mCounterTask, 1000, 1000);
+        Log.d(TAG, "LocationActivity onCreate");
+        setupBase();
         checkForKillCommand(getUpdateServiceIntent());
-        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 		registerReceivers();
 		/*
 		 * We're creating a card for the interface.
@@ -71,9 +60,9 @@ public class MainActivity extends Activity {
         if (intent != null) {
             Bundle extras = intent.getExtras();
             if (extras != null) {
-                String provider = extras.getString(LocationService.PROVIDER_MESSAGE);
+                String provider = extras.getString(SensorService.PROVIDER_MESSAGE);
                 Location location = extras.getParcelable(LocationService.LOCATION_MESSAGE);
-                String status = extras.getString(LocationService.STATUS_MESSAGE);
+                String status = extras.getString(SensorService.STATUS_MESSAGE);
                 String emptyUpdate = extras.getString(LocationService.SEARCHING_METHOD);
                 if (provider != null) {
                     Log.d(TAG, "provider: " + provider);
@@ -153,43 +142,10 @@ public class MainActivity extends Activity {
         PrefsHelper.setLastLocation(this, location.getLatitude(), location.getLongitude(), location.getAccuracy());
     }
 
-    private String getDateFormated() {
-        SimpleDateFormat dateFormat = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss z");
-        return dateFormat.format(new Date());
-    }
-
-    private void setAlarm() {
-        Intent intent = getUpdateServiceIntent();
-        AlarmManager alarmManager = (AlarmManager) getSystemService(ALARM_SERVICE);
-        PendingIntent service = PendingIntent.getService(this, 42, intent, 0);
-        mAlarms.add(service);
-        alarmManager.set(AlarmManager.RTC_WAKEUP, System.currentTimeMillis() + TWO_SECONDS, service);
-    }
-
-    @Override
-    public boolean onKeyDown(int keyCode, KeyEvent event) {
-        if (keyCode == KeyEvent.KEYCODE_DPAD_CENTER) {
-            openOptionsMenu();
-        } else if (keyCode == KeyEvent.KEYCODE_BACK) {
-            Log.d(TAG, "onBackButton...");
-            mTimer.cancel();
-            Intent intent = getUpdateServiceIntent();
-            intent.putExtra(LocationService.KILL_UPDATES, true);
-            AlarmManager alarmManager = (AlarmManager) getSystemService(ALARM_SERVICE);
-            Log.d(TAG, String.format("Canceling %d alarms", mAlarms.size()));
-            for (PendingIntent pendingIntent : mAlarms) {
-                alarmManager.cancel(pendingIntent);
-            }
-            startService(intent);
-        }
-        return super.onKeyDown(keyCode, event);
-    }
-
-    List<PendingIntent> mAlarms = new ArrayList<PendingIntent>(0);
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         MenuInflater inflater = getMenuInflater();
-        inflater.inflate(R.menu.magic, menu);
+        inflater.inflate(R.menu.options, menu);
         return true;
     }
 
@@ -200,35 +156,19 @@ public class MainActivity extends Activity {
     }
 
     @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        switch (item.getItemId()) {
-            case R.id.action_settings:
-                PrefsHelper.setHome(getApplicationContext());
-                return true;
-            default:
-                return super.onOptionsItemSelected(item);
-        }
+    protected Intent getUpdateServiceIntent() {
+        return new Intent(this, SensorService.class);
     }
-
-    private Intent getUpdateServiceIntent() {
-        return new Intent(this, LocationService.class);
-    }
-//    @Override
-//    protected void onStart() {
-//        super.onStart();
-//        setViews(null);
-//        Log.d(TAG, "MainActivity onStart");
-//    }
 
     @Override
     protected void onStop() {
         super.onStop();
-        Log.d(TAG, "MainActivity onStop");
+        Log.d(TAG, "LocationActivity onStop");
         LocalBroadcastManager.getInstance(getApplicationContext()).unregisterReceiver(mBroadcastReceiver);
     }
 
     protected void onDestroy() {
-        Log.d(TAG, "MainActivity onDestroy");
+        Log.d(TAG, "LocationActivity onDestroy");
         super.onDestroy();
     }
     private void registerReceivers() {
@@ -243,12 +183,6 @@ public class MainActivity extends Activity {
         };
         LocalBroadcastManager.getInstance(getApplicationContext())
                 .registerReceiver(mBroadcastReceiver, new IntentFilter(LOCATION_UPDATE));
-    }
-
-    private void checkForKillCommand(Intent intent) {
-        if (intent.getExtras() != null && intent.getExtras().getBoolean(LocationService.KILL_UPDATES)) {
-            finish();
-        }
     }
 
     private String getLocationText(Location location) {
@@ -266,17 +200,4 @@ public class MainActivity extends Activity {
                 address.get(0).getAddressLine(0) + "\n" + address.get(0).getAddressLine(1));
     }
 
-    private class CounterTask extends TimerTask {
-        @Override
-        public void run() {
-            Log.d(TAG, "Timer fired: " + mSecondsSince);
-            runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    mCard.setFootnote("Since last update: " + mSecondsSince++);
-                    setContentView(mCard.toView());
-                }
-            });
-        }
-    }
 }

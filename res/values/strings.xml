@@ -4,7 +4,8 @@
     <string name="app_name">GlassHome</string>
     <string name="action_settings">Set Home</string>
 
-    <string name="start_helloglass">smart home</string> <!-- The phrase used to start the application. -->
+    <string name="start_location">Location</string> <!-- The phrase used to start the LocationService. -->
+    <string name="start_sensors">Sensors</string> <!-- Used to start SensorService -->
     
     <string name="stop">Goodbye Glass</string>
     <string name="hello_glass">Hello, Glass!</string>
@@ -12,5 +13,8 @@
     <string name="provider_message">Provider Message</string>
     <string name="location_message">Location Message</string>
     <string name="status_message">Status Message</string>
+    <string name="launch_sensors">Launch sensors</string>
+    <string name="sensor_label">Sensors</string>
+    <string name="sensor_label_service">Sensor label service</string>
 
 </resources>

@@ -17,19 +17,14 @@ import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Bundle;
 import android.os.IBinder;
-import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
-import com.google.android.glass.timeline.LiveCard;
 import com.google.android.glass.timeline.TimelineManager;
 
-public class LocationService extends Service {
-	
-	private static final String LIVE_CARD_ID = "helloglass";
-    public static final String MESSAGE = "message";
+public class LocationService extends BaseService {
     public static final String LOCATION_MESSAGE = "location_message";
     public static final String STATUS_MESSAGE = "status_message";
     public static final String PROVIDER_MESSAGE = "provider_message";
-    private static final String TAG = LocationService.class.getSimpleName();
+    private static final String TAG = SensorService.class.getSimpleName();
     public static final String SEARCHING_METHOD = "searching_message";
     public static final String KILL_UPDATES = "kill_updates";
 
@@ -40,20 +35,13 @@ public class LocationService extends Service {
      */
 	private TimelineManager mTimelineManager;
 	
-	/*
-	 * LiveCard lets you create cards as well as publish them to the users timeline.
-	 * 
-	 * Additional information: https://developers.google.com/glass/develop/gdk/reference/com/google/android/glass/timeline/LiveCard
-	 */
-	@SuppressWarnings("unused")
-	private LiveCard mLiveCard;
+
     private LocationManager mLocationManager;
     private LocationListener mLocationListener;
 
     @Override
 	public void onCreate() {
 		super.onCreate();
-		mTimelineManager = TimelineManager.from(this);
 	} // onCreate
 
 	@Override
@@ -64,9 +52,10 @@ public class LocationService extends Service {
 
     private static boolean isStarted = false;
 	/*
-	 * onStartCommand is used to start a service from your voice trigger you set up in res/xml/voice_trigger_start.xml
+	 * onStartCommand is used to start a service from your voice trigger you set up in res/xml/voice_trigger_location.xmlxml
 	 */
 	public int onStartCommand(Intent intent, int flags, int startId) {
+        setupService();
         if (!isStarted) {
             isStarted = true;
             location();
@@ -76,9 +65,7 @@ public class LocationService extends Service {
                 killAllLocationThings(intent);
             }
         }
-		// Where the magic happens
-		mLiveCard = mTimelineManager.createLiveCard(LIVE_CARD_ID);
-        mLiveCard.publish(LiveCard.PublishMode.REVEAL);
+
 		Intent i = new Intent(this, getLiveCardClass());
 
         i.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
@@ -90,6 +77,11 @@ public class LocationService extends Service {
 
 		return Service.START_NOT_STICKY;
 	} // onStartCommand
+
+    @Override
+    protected Class<?> getLiveCardClass() {
+        return LocationActivity.class;
+    }
 
     private void killAllLocationThings(Intent intent) {
         if (mLocationManager != null&& mLocationListener != null) {
@@ -146,16 +138,8 @@ public class LocationService extends Service {
         sendMessage(intent);
     }
 
-    private Intent getUpdateIntent() {
-        return new Intent(MainActivity.LOCATION_UPDATE);
-    }
-
-    private Class<?> getLiveCardClass() {
-        return MainActivity.class;
-    }
-
-    private void sendMessage(Intent intent) {
-        LocalBroadcastManager.getInstance(getApplicationContext())
-                .sendBroadcast(intent);
+    @Override
+    protected Intent getUpdateIntent() {
+        return new Intent(LocationActivity.LOCATION_UPDATE);
     }
 }
